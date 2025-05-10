@@ -52,6 +52,10 @@ def parse_arguments():
         "--deps", nargs="+", default=["numpy", "pandas", "matplotlib", "pytest"],
         help="Initial Python dependencies (default: numpy pandas matplotlib pytest)"
     )
+    parser.add_argument(
+        "--open-vscode", action="store_true", 
+        help="Open the project in VSCode after creation"
+    )
     
     return parser.parse_args()
 
@@ -702,6 +706,57 @@ def main():
     print(f"🎉 Project {args.project_name} successfully created at {project_path}")
     print("=" * 80)
     
+    # Open VSCode if requested
+    if args.open_vscode:
+        try:
+            print("\nOpening project in VSCode...")
+            
+            # Create VSCode settings to use the virtual environment
+            vscode_dir = project_path / ".vscode"
+            os.makedirs(vscode_dir, exist_ok=True)
+            
+            # Create settings.json with Python path to the virtual environment
+            settings = {
+                "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
+                "python.terminal.activateEnvironment": true,
+                "git.enableSmartCommit": true,
+                "editor.formatOnSave": true,
+                "python.formatting.provider": "black",
+                "python.linting.enabled": true,
+                "python.linting.flake8Enabled": true
+            }
+            
+            # Windows uses a different path
+            if os.name == 'nt':
+                settings["python.defaultInterpreterPath"] = "${workspaceFolder}\\venv\\Scripts\\python.exe"
+            
+            # Write settings.json
+            import json
+            with open(vscode_dir / "settings.json", "w") as f:
+                json.dump(settings, f, indent=4)
+                
+            # Create VSCode extensions recommendations
+            extensions = {
+                "recommendations": [
+                    "ms-python.python",
+                    "ms-python.vscode-pylance",
+                    "ms-toolsai.jupyter",
+                    "njpwerner.autodocstring",
+                    "streetsidesoftware.code-spell-checker"
+                ]
+            }
+            
+            with open(vscode_dir / "extensions.json", "w") as f:
+                json.dump(extensions, f, indent=4)
+            
+            # Open VSCode in the project directory
+            subprocess.Popen(["code", str(project_path)], close_fds=True)
+            print("✅ VSCode settings configured and project opened")
+            
+        except (subprocess.SubprocessError, FileNotFoundError):
+            print("❌ Failed to open VSCode. Make sure VSCode is installed and 'code' command is in your PATH")
+            print(f"   You can open it manually: code {project_path}")
+
     # Print next steps
     print("\nNext steps:")
     print(f"1. cd {args.project_name}")
